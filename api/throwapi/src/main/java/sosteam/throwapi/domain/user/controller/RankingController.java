@@ -7,13 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import sosteam.throwapi.domain.user.controller.request.RankingRequest;
+import sosteam.throwapi.domain.store.entity.Store;
+import sosteam.throwapi.domain.user.controller.request.user.InputId;
 import sosteam.throwapi.domain.user.controller.response.RankingResponse;
+import sosteam.throwapi.domain.user.controller.response.StoreResponse;
 import sosteam.throwapi.domain.user.entity.dto.user.RankingDto;
 import sosteam.throwapi.domain.user.service.MileageSearchService;
 import sosteam.throwapi.global.service.JwtTokenService;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -31,12 +33,34 @@ public class RankingController {
 
         List<RankingResponse> rankingResponses = leaderBoard.stream()
                 .map(rankingDto -> new RankingResponse(
+                        rankingDto.getInputId(),
                         rankingDto.getUserName(),
                         rankingDto.getMileage(),
                         rankingDto.getRanking()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(rankingResponses);
+    }
+
+    @PostMapping("/store")
+    public ResponseEntity<List<StoreResponse>> searchStoreByInputId(@RequestBody @Valid InputId inputId){
+        log.debug("in searchStoreByInputId inputId = {}", inputId.getInputId());
+        Set<Store> result = mileageSearchService.searchStoreByInputId(inputId.getInputId());
+
+        List<StoreResponse> storeResponses = result.stream()
+                .filter(store -> store.getStoreName() != null && store.getExtStoreId() != null)
+                .map(store -> new StoreResponse(
+                        store.getStoreName(),
+                        store.getExtStoreId()))
+                .collect(Collectors.toList());
+
+
+        Iterator<Store> iter = result.iterator();
+        while(iter.hasNext()){
+            log.debug("searchStoreByInputId repo result = {}",iter.next().getStoreName());
+        }
+
+        return ResponseEntity.ok(storeResponses);
     }
 
     @GetMapping
@@ -49,6 +73,7 @@ public class RankingController {
         RankingDto rankingDto = mileageSearchService.searchUserRankingByInputId(inputId);
 
         RankingResponse rankingResponse = new RankingResponse(
+                rankingDto.getInputId(),
                 rankingDto.getUserName(),
                 rankingDto.getMileage(),
                 rankingDto.getRanking());
